@@ -7,165 +7,153 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div id="loginOverlay">
-        <div class="login-card">
-            <h2>E-CTZN TERMINAL</h2>
-            <p class="login-subtitle">CHENGALPATTU DISTRICT JURISDICTION</p>
-            <div class="role-selection">
-                <label>Access Tier</label>
-                <select id="userRole" onchange="toggleKey(this.value)">
-                    <option value="User">Volunteer/Reporter</option>
-                    <option value="Admin">District Administrator</option>
-                </select>
-            </div>
-            <div id="adminKeyContainer" class="hidden">
-                <label>Security Key</label>
-                <input type="password" id="adminKey" placeholder="Default: 1234">
-            </div>
-            <button onclick="Engine.login()" class="login-btn">Initialize Session</button>
-        </div>
-    </div>
 
-    <div class="sidebar">
-        <div class="sidebar-header">E-CTZN COMMAND<small>CHENGALPATTU HQ</small></div>
-        <a onclick="Engine.showSection('home')">Summary</a>
-        <a onclick="Engine.showSection('volunteer')">Personnel</a>
-        <a onclick="Engine.showSection('task')">SOS Intelligence</a>
-        <a onclick="Engine.showSection('dashboard')">Operations</a>
-        <div class="sidebar-footer">
-            <button onclick="localStorage.clear(); location.reload();" class="reset-btn">FACTORY RESET</button>
+<div id="loginOverlay">
+    <div class="login-card">
+        <h2>E-CTZN TERMINAL</h2>
+        <p style="font-size:0.7rem; color:gray;">CHENGALPATTU DISTRICT JURISDICTION</p>
+        <div style="text-align: left; margin: 20px 0;">
+            <label>Access Tier</label>
+            <select id="userRole" onchange="toggleKey(this.value)">
+                <option value="User">Volunteer/Reporter</option>
+                <option value="Admin">District Administrator</option>
+            </select>
         </div>
+        <div id="adminKeyContainer" class="hidden" style="text-align: left; margin-bottom: 20px;">
+            <label>Security Key</label>
+            <input type="password" id="adminKey" placeholder="Default: 1234">
+        </div>
+        <button onclick="Engine.login()" style="width: 100%;">Initialize Session</button>
     </div>
+</div>
 
-    <div class="main">
-        <div id="homeSection" class="content-container">
-            <div id="apiAlert" class="hidden alert-banner"></div>
-            <h1>District Overview</h1>
+<div class="sidebar">
+    <div class="sidebar-header">E-CTZN COMMAND<small>CHENGALPATTU HQ</small></div>
+    <a onclick="Engine.showSection('home')">Summary</a>
+    <a onclick="Engine.showSection('volunteer')">Personnel</a>
+    <a onclick="Engine.showSection('task')">SOS Intelligence</a>
+    <a onclick="Engine.showSection('dashboard')">Operations</a>
+    <div style="margin-top:auto; padding:20px;">
+        <button onclick="localStorage.clear(); location.reload();" style="background:#ef4444; font-size:0.6rem; width:100%;">FACTORY RESET</button>
+    </div>
+</div>
+
+<div class="main">
+    <div id="homeSection" class="content-container">
+        <div id="apiAlert" class="hidden alert-banner"></div>
+        <h1>District Overview</h1>
+        
+        <div class="form-grid">
+            <div id="intelPanel" class="card full-width hidden">
+                <h3>Chengalpattu Intel Feeds</h3>
+                <div class="form-grid">
+                    <div>
+                        <small>USGS Global (Seismic)</small>
+                        <button onclick="Engine.fetchUSGS()" style="width:100%; font-size:0.7rem; margin-top:5px;">Scan Sensors</button>
+                    </div>
+                    <div>
+                        <small>PurpleAir (AQI)</small>
+                        <button onclick="Engine.fetchPurpleAir()" style="width:100%; font-size:0.7rem; margin-top:5px; background:var(--info);">Check Local AQI</button>
+                    </div>
+                </div>
+                <p id="apiStatus" style="font-size:0.65rem; color: #64748b; margin-top:10px;">Awaiting District Scan...</p>
+            </div>
+
+            <div class="card">Verified Personnel<h2 id="statVols">0</h2></div>
+            <div class="card">Active Missions<h2 id="statIncidents">0</h2></div>
             
-            <div class="form-grid">
-                <div id="intelPanel" class="card full-width hidden">
-                    <h3>Chengalpattu Intel Feeds</h3>
-                    <div class="form-grid">
-                        <div>
-                            <small>USGS Global (Seismic)</small>
-                            <button onclick="Engine.fetchUSGS()" class="intel-btn">Scan Sensors</button>
-                        </div>
-                        <div>
-                            <small>PurpleAir (AQI)</small>
-                            <button onclick="Engine.fetchPurpleAir()" class="intel-btn aqi-btn">Check Local AQI</button>
-                        </div>
-                    </div>
-                    <p id="apiStatus" class="api-status">Awaiting District Scan...</p>
-                </div>
-
-                <div class="card"><h3>Verified Personnel</h3><h2 id="statVols">0</h2></div>
-                <div class="card"><h3>Active Missions</h3><h2 id="statIncidents">0</h2></div>
-                
-                <div class="card full-width" id="personalStatusCard">
-                    <h3>Personal Deployment Status</h3>
-                    <p>Current Status: <span id="currentStatusText">---</span></p>
-                    <button onclick="Engine.toggleDuty()" id="dutyBtn" class="duty-btn">Toggle Duty Status</button>
-                </div>
-
-                <div class="card full-width">
-                    <h3>Township Personnel Distribution</h3>
-                    <div id="heatmapArea" class="heatmap-box">
-                        <small>Loading real-time district data...</small>
-                    </div>
-                </div>
+            <div class="card full-width" id="personalStatusCard">
+                <h3>Personal Deployment Status</h3>
+                <p>Current Status: <span id="currentStatusText">---</span></p>
+                <button onclick="Engine.toggleDuty()" id="dutyBtn" style="background: var(--secondary);">Toggle Duty Status</button>
             </div>
-        </div>
 
-        <div id="volunteerSection" class="content-container hidden">
-            <div class="card">
-                <h3>Responder Enrollment</h3>
-                <div class="form-grid">
-                    <div class="section-title">Credentials</div>
-                    <div class="full-width"><label>Full Name</label><input type="text" id="volName"></div>
-                    <div><label>ID (Aadhar)</label><input type="text" id="volGovID"></div>
-                    <div><label>Blood Group</label><select id="volBlood">
-                        <option>A+</option><option>A-</option><option>B+</option><option>B-</option>
-                        <option>O+</option><option>O-</option><option>AB+</option><option>AB-</option>
-                    </select></div>
-                    <div class="section-title">Chengalpattu Deployment</div>
-                    <div><label>Township</label>
-                        <select id="volLocation">
-                            <option value="Chengalpattu Town">Chengalpattu Town</option>
-                            <option value="Tambaram (Dist Boundary)">Tambaram</option>
-                            <option value="Pallavaram">Pallavaram</option>
-                            <option value="Chromepet">Chromepet</option>
-                            <option value="Maraimalai Nagar">Maraimalai Nagar</option>
-                            <option value="Guduvanchery">Guduvanchery</option>
-                            <option value="Mahabalipuram">Mahabalipuram</option>
-                            <option value="Maduranthakam">Maduranthakam</option>
-                            <option value="Tiruporur">Tiruporur</option>
-                        </select>
-                    </div>
-                    <div><label>Expertise</label>
-                        <select id="volSkill">
-                            <option value="MED">Medical Specialist</option><option value="RES">Heavy Rescue</option>
-                            <option value="FIR">Fire Support</option><option value="LOG">Logistics & Supply</option>
-                            <option value="GEN">Generalist</option>
-                        </select>
-                    </div>
-                    <button onclick="Engine.registerVolunteer()" class="register-btn full-width">Register Responder</button>
-                </div>
-            </div>
-            <div id="verificationAdminCard" class="card hidden">
-                <h3 class="admin-title">Admin Audit Queue</h3>
-                <div id="vList"></div>
-            </div>
-        </div>
-
-        <div id="taskSection" class="content-container hidden">
-            <div id="adminReviewSection" class="card hidden">
-                <h3 class="review-title">Pending Authorization</h3>
-                <div id="reviewList"></div>
-            </div>
-            <div class="card">
-                <h3>SOS Intelligence Report</h3>
-                <div class="form-grid">
-                    <div class="section-title">Incident Details</div>
-                    <div><label>Category</label><select id="taskType">
-                        <option>Industrial Fire</option><option>Flood/Water</option>
-                        <option>Mass Casualty</option><option>Utility Failure</option>
-                    </select></div>
-                    <div><label>District Township</label>
-                        <select id="taskLocation">
-                            <option value="Chengalpattu Town">Chengalpattu Town</option>
-                            <option value="Tambaram">Tambaram</option>
-                            <option value="Guduvanchery">Guduvanchery</option>
-                            <option value="Maraimalai Nagar">Maraimalai Nagar</option>
-                            <option value="Mahabalipuram">Mahabalipuram</option>
-                        </select>
-                    </div>
-                    <div class="full-width"><label>Address / Landmark</label><input type="text" id="taskAddress"></div>
-                    <div class="section-title">Response Matching</div>
-                    <div class="full-width"><label>Skill Required</label><select id="taskSkillReq">
-                        <option value="MED">Medical</option><option value="RES">Rescue</option>
-                        <option value="FIR">Fire</option><option value="LOG">Logistics</option>
-                    </select></div>
-                    <div class="full-width"><label>Units Needed</label><input type="number" id="taskMax" value="3"></div>
-                    <div class="full-width"><label>Priority</label><select id="taskCrit">
-                        <option value="HIGH">CRITICAL</option><option value="LOW">URGENT</option>
-                    </select></div>
-                    <button onclick="Engine.createIncident()" class="btn-dispatch full-width">Transmit SOS Signal</button>
-                </div>
-            </div>
-        </div>
-
-        <div id="dashboardSection" class="content-container hidden">
-            <div class="form-grid">
-                <div><h4>Live Missions</h4><div id="list-progress"></div></div>
-                <div>
-                    <h4>District Archives (AAR)</h4>
-                    <input type="text" id="aarSearch" class="search-input" placeholder="Filter by Township..." onkeyup="Engine.renderDashboard()">
-                    <div id="list-resolved"></div>
+            <div class="card full-width">
+                <h3>Township Personnel Distribution</h3>
+                <div id="heatmapArea" class="heatmap-box">
+                    <small>Loading real-time district data...</small>
                 </div>
             </div>
         </div>
     </div>
 
-    <script src="script.js"></script>
+    <div id="volunteerSection" class="content-container hidden">
+        <div class="card">
+            <h3>Responder Enrollment</h3>
+            <div class="form-grid">
+                <div class="section-title">Credentials</div>
+                <div class="full-width"><label>Full Name</label><input type="text" id="volName"></div>
+                <div><label>ID (Aadhar)</label><input type="text" id="volGovID"></div>
+                <div><label>Blood Group</label><select id="volBlood"><option>A+</option><option>A-</option><option>B+</option><option>B-</option><option>O+</option><option>O-</option><option>AB+</option><option>AB-</option></select></div>
+                <div class="section-title">Chengalpattu Deployment</div>
+                <div><label>Township</label>
+                    <select id="volLocation">
+                        <option value="Chengalpattu Town">Chengalpattu Town</option>
+                        <option value="Tambaram (Dist Boundary)">Tambaram</option>
+                        <option value="Pallavaram">Pallavaram</option>
+                        <option value="Chromepet">Chromepet</option>
+                        <option value="Maraimalai Nagar">Maraimalai Nagar</option>
+                        <option value="Guduvanchery">Guduvanchery</option>
+                        <option value="Mahabalipuram">Mahabalipuram</option>
+                        <option value="Maduranthakam">Maduranthakam</option>
+                        <option value="Tiruporur">Tiruporur</option>
+                    </select>
+                </div>
+                <div><label>Expertise</label>
+                    <select id="volSkill">
+                        <option value="MED">Medical Specialist</option><option value="RES">Heavy Rescue</option><option value="FIR">Fire Support</option><option value="LOG">Logistics & Supply</option><option value="GEN">Generalist</option>
+                    </select>
+                </div>
+                <button onclick="Engine.registerVolunteer()" class="full-width">Register Responder</button>
+            </div>
+        </div>
+        <div id="verificationAdminCard" class="card hidden">
+            <h3 style="color:var(--accent)">Admin Audit Queue</h3>
+            <div id="vList"></div>
+        </div>
+    </div>
+
+    <div id="taskSection" class="content-container hidden">
+        <div id="adminReviewSection" class="card hidden">
+            <h3 style="color:var(--warning)">Pending Authorization</h3>
+            <div id="reviewList"></div>
+        </div>
+        <div class="card">
+            <h3>SOS Intelligence Report</h3>
+            <div class="form-grid">
+                <div class="section-title">Incident Details</div>
+                <div><label>Category</label><select id="taskType"><option>Industrial Fire</option><option>Flood/Water</option><option>Mass Casualty</option><option>Utility Failure</option></select></div>
+                <div><label>District Township</label>
+                    <select id="taskLocation">
+                        <option value="Chengalpattu Town">Chengalpattu Town</option>
+                        <option value="Tambaram">Tambaram</option>
+                        <option value="Guduvanchery">Guduvanchery</option>
+                        <option value="Maraimalai Nagar">Maraimalai Nagar</option>
+                        <option value="Mahabalipuram">Mahabalipuram</option>
+                    </select>
+                </div>
+                <div class="full-width"><label>Address / Landmark</label><input type="text" id="taskAddress"></div>
+                <div class="section-title">Response Matching</div>
+                <div class="full-width"><label>Skill Required</label><select id="taskSkillReq"><option value="MED">Medical</option><option value="RES">Rescue</option><option value="FIR">Fire</option><option value="LOG">Logistics</option></select></div>
+                <div class="full-width"><label>Units Needed</label><input type="number" id="taskMax" value="3"></div>
+                <div class="full-width"><label>Priority</label><select id="taskCrit"><option value="HIGH">CRITICAL</option><option value="LOW">URGENT</option></select></div>
+                <button onclick="Engine.createIncident()" class="btn-dispatch full-width">Transmit SOS Signal</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="dashboardSection" class="content-container hidden">
+        <div class="form-grid">
+            <div><h4>Live Missions</h4><div id="list-progress"></div></div>
+            <div>
+                <h4>District Archives (AAR)</h4>
+                <input type="text" id="aarSearch" style="margin-bottom:10px;" placeholder="Filter by Township..." onkeyup="Engine.renderDashboard()">
+                <div id="list-resolved"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="script.js"></script>
 </body>
 </html>
