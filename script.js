@@ -1,5 +1,7 @@
-/** * DISTRICT HQ COMMAND & CONTROL ENGINE - V3.0
- * EXTENDED FEATURES: GovID Verification, Skill-based Deployment, and Tactical Authorization
+/**
+ * MISSION CRITICAL: DISTRICT HQ COMMAND & CONTROL ENGINE
+ * Features: Manual GovID Verification, Incident Authorization, Tactical Skill-Matching, 
+ * Broadcast Messaging, CSV Export, and Real-time Auditing.
  */
 window.Engine = {
     role: "User",
@@ -9,32 +11,30 @@ window.Engine = {
     msgs: JSON.parse(localStorage.getItem('cpt_msgs')) || [], 
     userLocation: null,
 
-    // --- 1. AUTHORITY VERIFICATION ACTIONS ---
+    // --- 1. AUTHORITY VERIFICATION & SECURITY ---
 
     /**
      * Approves responder credentials based on GovID.
-     * Inherited from Verification List style.
+     * Prevents unverified users from going on duty.
      */
     authorizeResponder(idx) { 
-        if(confirm(`SYSTEM NOTIFICATION: Authorize credentials for ${this.vols[idx].name}?`)) {
+        if(confirm(`SYSTEM OVERRIDE: Verify credentials and authorize ${this.vols[idx].name} for duty?`)) {
             this.vols[idx].isVerified = true;
-            this.vols[idx].authDate = new Date().toLocaleString();
-            this.vols[idx].officerRank = "Field Specialist";
+            this.vols[idx].authTimestamp = new Date().toLocaleString();
+            this.vols[idx].verifiedBy = "DISTRICT_HQ_ADMIN";
             this.save();
             this.renderAdminDatabase();
             this.updateStats();
-            alert("PERSONNEL STATUS: Verified and authorized for deployment.");
+            alert("PERSONNEL VERIFIED: ID and credentials logged.");
         }
     },
 
     /**
-     * Authorizes a public report and initiates tactical matching.
-     * Inherited from Review Queue style.
+     * Authorizes a public report.
+     * Logic: Moves from 'UNAUTHORIZED' -> 'IN_PROGRESS' if matching assets found.
      */
     authorizeReport(idx) {
         const inc = this.incs[idx];
-        
-        // Advanced Match Logic: Filter by Verification, Duty Status, Location, and Required Skills
         const matches = this.vols.filter(v => 
             v.isVerified && 
             v.isOnDuty && 
@@ -43,169 +43,172 @@ window.Engine = {
             v.skills.some(s => inc.requiredSkills.includes(s))
         ).slice(0, inc.maxNeeded);
 
-        // Update Incident status based on deployment success
         inc.status = matches.length > 0 ? 'IN_PROGRESS' : 'PENDING';
         inc.responderIds = matches.map(m => m.id);
-        inc.deploymentTime = new Date().toLocaleTimeString();
-        
-        // Mark personnel as actively engaged
         matches.forEach(m => { m.isBusy = true; });
 
         this.save();
         this.renderAdminDatabase();
         this.renderDashboard();
-        alert(`TACTICAL OPS: Authorized. ${matches.length} qualified responders dispatched.`);
+        alert(`TACTICAL DEPLOYMENT: Authorized. ${matches.length} assets assigned.`);
     },
 
-    // --- 2. REGISTRATION & DATA INPUT (ENHANCED) ---
+    // --- 2. REGISTRATION & REPORTING (ALL FIELDS INCLUDED) ---
 
     registerVolunteer() {
-        const nameInput = document.getElementById('volName');
-        const govIDInput = document.getElementById('volGovID');
-        const skillChecks = Array.from(document.querySelectorAll('input[name="vskill"]:checked')).map(i => i.value);
+        const name = document.getElementById('volName').value;
+        const govID = document.getElementById('volGovID')?.value || "N/A";
+        const skills = Array.from(document.querySelectorAll('input[name="vskill"]:checked')).map(i => i.value);
 
-        if(!nameInput.value) return alert("CRITICAL: Legal Name is mandatory for Authority Verification.");
+        if(!name) return alert("Full Name is required for District HQ verification.");
         
-        const volunteerProfile = { 
+        const vProfile = { 
             id: 'V-' + Math.floor(1000 + Math.random() * 9000), 
-            name: nameInput.value, 
-            govID: govIDInput ? govIDInput.value : "PENDING_DOCS",
-            skills: skillChecks, 
+            name: name, 
+            govID: govID,
+            skills: skills, 
             location: document.getElementById('volLocation').value, 
-            tier: document.getElementById('volMainSkill')?.value || "Standard",
+            tier: document.getElementById('volMainSkill')?.value || "Generalist",
+            avail: document.getElementById('volAvail')?.value || "Immediate",
             isVerified: false, 
             isOnDuty: false, 
             isBusy: false,
             regDate: new Date().toLocaleDateString()
         };
         
-        this.vols.push(volunteerProfile); 
+        this.vols.push(vProfile); 
         this.save(); 
-        alert("REGISTRY LOGGED: Your credentials have been submitted to District HQ for manual verification."); 
+        alert("LOGGED: Credentials submitted. Access to duty features restricted until HQ Verification."); 
         this.showSection('home');
     },
 
     createIncident() {
         const reqSkills = Array.from(document.querySelectorAll('input[name="tskill"]:checked')).map(i => i.value);
-        const taskLoc = document.getElementById('taskLocation').value;
-        const criticality = document.getElementById('taskCriticality')?.value || "Standard";
-
-        const incidentLog = {
+        
+        const newInc = {
             id: 'OPS-' + Math.random().toString(36).substr(2, 4).toUpperCase(),
             type: document.getElementById('taskType').value,
-            criticality: criticality,
-            location: taskLoc,
+            criticality: document.getElementById('taskCriticality')?.value || "Medium",
+            location: document.getElementById('taskLocation').value,
             address: document.getElementById('taskAddress').value,
-            requiredSkills: reqSkills,
-            maxNeeded: parseInt(document.getElementById('taskMaxVolunteers')?.value) || 2,
             hazmat: document.getElementById('taskHazmat')?.value || "None",
             victims: document.getElementById('taskVictims')?.value || "0",
-            // Public reports remain UNAUTHORIZED until Admin review
+            maxNeeded: parseInt(document.getElementById('taskMaxVolunteers')?.value) || 2,
+            requiredSkills: reqSkills,
             status: (this.role === 'Admin' ? 'PENDING' : 'UNAUTHORIZED'),
             responderIds: [],
             timestamp: new Date().toLocaleString()
         };
         
-        this.incs.push(incidentLog); 
+        this.incs.push(newInc); 
         this.save(); 
-        
-        if(this.role === 'Admin') {
-            alert("COMMAND ALERT: Incident successfully logged in the Ops Database.");
-            this.renderAdminDatabase();
-        } else {
-            alert("REPORT FILED: Authorities have been notified to validate this emergency.");
-        }
+        alert(this.role === 'Admin' ? "Incident Active" : "Report Filed: Awaiting HQ Validation");
         this.showSection('dashboard');
     },
 
-    // --- 3. THE EXPANDED ADMIN DASHBOARD (COMBINED STYLES) ---
+    // --- 3. COMMUNICATIONS & EXPORTS ---
+
+    sendAdminMessage() {
+        const input = document.getElementById('adminMsgInput');
+        if (!input || !input.value) return alert("Message is empty.");
+        
+        const msg = { 
+            id: Date.now(), 
+            sender: "DISTRICT HQ", 
+            text: input.value, 
+            timestamp: new Date().toLocaleTimeString() 
+        };
+        this.msgs.push(msg);
+        this.save();
+        input.value = '';
+        this.renderAdminDatabase();
+    },
+
+    renderMessages() {
+        const container = document.getElementById('volunteerMsgDisplay');
+        if (!container || this.role === 'Admin') return;
+        container.innerHTML = this.msgs.slice(-3).reverse().map(m => `
+            <div style="background:#fff3cd; border-left:5px solid #ffc107; padding:12px; margin:8px 0; border-radius:6px;">
+                <strong>⚠️ HQ UPDATE [${m.timestamp}]:</strong> ${m.text}
+            </div>
+        `).join('');
+    },
+
+    exportToCSV(type) {
+        let data = type === 'vols' ? this.vols : this.incs;
+        if (data.length === 0) return alert("No records found for export.");
+        const headers = Object.keys(data[0]);
+        const csv = [headers.join(','), ...data.map(row => headers.map(h => `"${row[h] || ''}"`).join(','))].join('\n');
+        const link = document.createElement("a");
+        link.href = 'data:text/csv;charset=utf-8,' + encodeURI(csv);
+        link.download = `HQ_EXPORT_${type.toUpperCase()}.csv`;
+        link.click();
+    },
+
+    // --- 4. ADMIN CONSOLE (COMBINED VIEW) ---
 
     renderAdminDatabase() {
         const dbContainer = document.getElementById('adminDatabaseView');
         if (!dbContainer || this.role !== 'Admin') return; 
 
-        dbContainer.classList.remove('hidden');
         dbContainer.innerHTML = `
-            <div style="background:#f1f5f9; padding:25px; border-radius:15px; border:3px solid #1e40af; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);">
-                <h2 style="margin-top:0; color:#1e40af; font-family:sans-serif;">🛡️ DISTRICT HQ: COMMAND & CONTROL</h2>
+            <div style="background:#f1f5f9; padding:20px; border-radius:12px; border:2px solid #1e40af;">
+                <h2 style="color:#1e40af; margin-top:0;">🛡️ COMMAND CONSOLE: DISTRICT HQ</h2>
                 
-                <div style="display:grid; grid-template-columns: 1fr; gap:25px;">
-                    
-                    <div id="adminReviewSection" style="background:#fff; padding:20px; border-radius:10px; border:2px solid #ef4444;">
-                        <h3 style="color:#ef4444; margin-top:0;">📡 Unauthorized Incident Reports</h3>
-                        <p style="font-size:12px; color:#666;">Validate public reports to initiate deployment.</p>
-                        <div id="reviewQueueList">
-                            ${this.incs.filter(i => i.status === 'UNAUTHORIZED').length === 0 ? 
-                            '<p style="color:#94a3b8; font-style:italic;">No unauthorized reports pending.</p>' : 
-                            this.incs.map((inc, i) => inc.status === 'UNAUTHORIZED' ? `
-                                <div style="background:#fff5f5; border:1px solid #feb2b2; padding:15px; border-radius:8px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;">
-                                    <div>
-                                        <strong style="font-size:16px;">${inc.type} @ ${inc.address}</strong><br>
-                                        <small>Risk: ${inc.hazmat} | Reported: ${inc.timestamp}</small>
-                                    </div>
-                                    <button onclick="Engine.authorizeReport(${i})" style="background:#ef4444; color:white; border:none; padding:10px 15px; border-radius:6px; font-weight:bold; cursor:pointer; box-shadow: 0 4px 6px rgba(239, 68, 68, 0.3);">VALIDATE & ACTIVATE OPS</button>
-                                </div>
-                            ` : '').join('')}
-                        </div>
-                    </div>
+                <div style="background:white; padding:15px; border-radius:8px; margin-bottom:15px; border:1px solid #cbd5e1;">
+                    <h3>📢 Mass Tactical Broadcast</h3>
+                    <textarea id="adminMsgInput" style="width:100%; height:50px; border:1px solid #ddd; border-radius:4px; padding:10px;"></textarea>
+                    <button onclick="Engine.sendAdminMessage()" style="width:100%; background:#1e40af; color:white; padding:10px; border:none; border-radius:4px; cursor:pointer; margin-top:10px; font-weight:bold;">Send Command</button>
+                </div>
 
-                    <div id="verificationAdminCard" style="background:white; padding:20px; border-radius:10px; border:2px solid #3b82f6;">
-                        <h3 style="color:#1e40af; margin-top:0;">📋 Responder Credential Registry</h3>
-                        <div style="overflow-x:auto;">
-                            <table style="width:100%; border-collapse:collapse;">
-                                <thead>
-                                    <tr style="background:#eff6ff; text-align:left; font-size:13px;">
-                                        <th style="padding:12px;">Personnel & GovID</th>
-                                        <th style="padding:12px;">Expertise/Skills</th>
-                                        <th style="padding:12px;">Verification Status</th>
-                                        <th style="padding:12px;">Command Action</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    ${this.vols.map((v, i) => `
-                                        <tr style="border-bottom:1px solid #e2e8f0; font-size:13px; background:${v.isVerified ? '#fff' : '#fffbeb'};">
-                                            <td style="padding:12px;">
-                                                <strong>${v.name}</strong><br>
-                                                <code style="background:#f1f5f9; padding:2px 4px; border-radius:3px; color:#475569;">${v.govID}</code>
-                                            </td>
-                                            <td style="padding:12px;">
-                                                <span style="font-size:11px; background:#dcfce7; color:#166534; padding:2px 6px; border-radius:10px;">${v.tier}</span><br>
-                                                <small style="color:#64748b;">${v.skills.join(', ')}</small>
-                                            </td>
-                                            <td style="padding:12px;">
-                                                ${v.isVerified ? 
-                                                    '<span style="color:#16a34a; font-weight:bold;">✔ AUTHORIZED</span>' : 
-                                                    '<span style="color:#b45309; font-weight:bold;">⏳ PENDING HQ</span>'}
-                                            </td>
-                                            <td style="padding:12px;">
-                                                ${!v.isVerified ? 
-                                                    `<button onclick="Engine.authorizeResponder(${i})" style="background:#2563eb; color:white; border:none; padding:8px 12px; border-radius:5px; font-weight:bold; cursor:pointer;">APPROVE CREDENTIALS</button>` : 
-                                                    `<span style="color:#94a3b8; font-size:11px;">Verified on ${v.authDate}</span>`
-                                                }
-                                            </td>
-                                        </tr>
-                                    `).join('')}
-                                </tbody>
-                            </table>
-                        </div>
+                <div style="background:white; padding:15px; border-radius:8px; margin-bottom:15px; border:1px solid #ef4444;">
+                    <div style="display:flex; justify-content:space-between;">
+                        <h3 style="color:#ef4444; margin:0;">🚨 Unauthorized Emergency Reports</h3>
+                        <button onclick="Engine.exportToCSV('incs')" style="background:#059669; color:white; border:none; padding:4px 8px; border-radius:4px; cursor:pointer; font-size:12px;">Export CSV</button>
                     </div>
+                    ${this.incs.filter(i => i.status === 'UNAUTHORIZED').map((inc, i) => `
+                        <div style="background:#fff5f5; padding:10px; margin-top:10px; border-radius:5px; border:1px solid #feb2b2; display:flex; justify-content:space-between; align-items:center;">
+                            <span><strong>${inc.type}</strong> @ ${inc.address}</span>
+                            <button onclick="Engine.authorizeReport(${i})" style="background:#ef4444; color:white; border:none; padding:8px 12px; border-radius:4px; font-weight:bold; cursor:pointer;">VALIDATE OPS</button>
+                        </div>
+                    `).join('') || '<p style="color:#666;">No reports pending validation.</p>'}
+                </div>
+
+                <div style="background:white; padding:15px; border-radius:8px; border:1px solid #1e40af;">
+                    <div style="display:flex; justify-content:space-between;">
+                        <h3 style="color:#1e40af; margin:0;">📋 Responder Verification Registry</h3>
+                        <button onclick="Engine.exportToCSV('vols')" style="background:#059669; color:white; border:none; padding:4px 8px; border-radius:4px; cursor:pointer; font-size:12px;">Export CSV</button>
+                    </div>
+                    <table style="width:100%; border-collapse:collapse; margin-top:10px;">
+                        <tr style="background:#e2e8f0; text-align:left; font-size:12px;">
+                            <th style="padding:8px;">Responder / GovID</th><th style="padding:8px;">Skills</th><th style="padding:8px;">Status</th><th style="padding:8px;">Action</th>
+                        </tr>
+                        ${this.vols.map((v, i) => `
+                            <tr style="border-bottom:1px solid #eee; font-size:13px;">
+                                <td style="padding:8px;"><strong>${v.name}</strong><br><small>${v.govID}</small></td>
+                                <td style="padding:8px;">${v.skills.join(', ')}</td>
+                                <td style="padding:8px; color:${v.isVerified ? 'green' : 'orange'}; font-weight:bold;">${v.isVerified ? 'VERIFIED' : 'PENDING'}</td>
+                                <td style="padding:8px;">
+                                    ${!v.isVerified ? `<button onclick="Engine.authorizeResponder(${i})" style="background:#2563eb; color:white; border:none; padding:5px 8px; border-radius:4px; cursor:pointer;">VERIFY</button>` : 'Authorized'}
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </table>
                 </div>
             </div>
         `;
     },
 
-    // --- 4. CORE ENGINE SUPPORT ---
+    // --- 5. CORE UI & STATE ---
 
     login() {
-        const roleSel = document.getElementById('userRole');
-        const adminKeyInput = document.getElementById('adminKey');
-        if (roleSel.value === 'Admin' && adminKeyInput.value !== this.ADMIN_KEY) {
-            return alert("SECURITY PROTOCOL: Invalid Administrative Credentials.");
-        }
-        this.role = roleSel.value;
+        const role = document.getElementById('userRole').value;
+        const key = document.getElementById('adminKey').value;
+        if (role === 'Admin' && key !== this.ADMIN_KEY) return alert("Security Breach: Invalid Credentials");
+        this.role = role;
         document.getElementById('loginOverlay').style.display = 'none';
         
-        // Dynamic visibility based on role
+        // Toggle side-panels
         const personalCard = document.getElementById('personalStatusCard');
         if(personalCard) personalCard.classList.toggle('hidden', this.role === 'Admin');
         
@@ -215,36 +218,26 @@ window.Engine = {
         this.showSection('home');
     },
 
-    showSection(id) {
-        document.querySelectorAll('.content-container').forEach(s => s.classList.add('hidden'));
-        const target = document.getElementById(id + 'Section');
-        if(target) target.classList.remove('hidden');
-        
-        // Render specific views
-        if (id === 'dashboard') {
-            this.renderDashboard();
-            if (this.role === 'Admin') this.renderAdminDatabase();
-        }
-        if (id === 'home') {
-            this.renderHeatmap();
-        }
-        this.updateStats();
-    },
-
     toggleDuty() {
         const user = this.vols[this.vols.length - 1]; 
-        if (!user) return alert("SYSTEM ERROR: No active registration found.");
-        
-        // Verification Gate
-        if (!user.isVerified) {
-            return alert("ACCESS DENIED: Credentials not yet verified by District HQ. You cannot go On-Duty.");
-        }
+        if (!user) return alert("Please register first.");
+        if (!user.isVerified) return alert("⛔ ACCESS DENIED: Credentials not verified by HQ.");
         
         user.isOnDuty = !user.isOnDuty;
         this.save(); 
         this.updateStats(); 
         this.renderHeatmap();
-        alert(user.isOnDuty ? "STATUS: ON-DUTY (Visible to Dispatch)" : "STATUS: OFF-DUTY");
+        alert(user.isOnDuty ? "STATUS: ON-DUTY" : "STATUS: OFF-DUTY");
+    },
+
+    showSection(id) {
+        document.querySelectorAll('.content-container').forEach(s => s.classList.add('hidden'));
+        const target = document.getElementById(id + 'Section');
+        if(target) target.classList.remove('hidden');
+        
+        if (id === 'home') { this.renderHeatmap(); this.renderMessages(); }
+        if (id === 'dashboard') { this.renderDashboard(); if(this.role === 'Admin') this.renderAdminDatabase(); }
+        this.updateStats();
     },
 
     renderDashboard() {
@@ -253,29 +246,26 @@ window.Engine = {
             IN_PROGRESS: document.getElementById('list-progress'), 
             RESOLVED: document.getElementById('list-resolved') 
         };
-        
-        // Clear all containers
         Object.values(containers).forEach(c => { if(c) c.innerHTML = ''; });
         
-        // Filter out Unauthorized reports from the public dashboard
         this.incs.filter(i => i.status !== 'UNAUTHORIZED').forEach(inc => {
             const card = document.createElement('div');
-            card.className = `emergency-card criticality-${inc.criticality.toLowerCase()}`;
-            card.style = "background:white; padding:15px; border-left:6px solid #1e40af; margin-bottom:15px; border-radius:8px; box-shadow:0 2px 4px rgba(0,0,0,0.05);";
-            
+            card.className = `emergency-card`;
+            card.style = "background:white; padding:15px; border-left:6px solid #1e40af; margin-bottom:10px; border-radius:8px; box-shadow:0 2px 4px rgba(0,0,0,0.1);";
             card.innerHTML = `
-                <div style="display:flex; justify-content:space-between;">
-                    <strong>ID: ${inc.id} | ${inc.type}</strong>
-                    <span style="font-size:11px; background:#fee2e2; color:#ef4444; padding:2px 8px; border-radius:10px; font-weight:bold;">${inc.criticality}</span>
-                </div>
-                <div style="margin-top:8px;">📍 ${inc.address}</div>
-                <div style="margin-top:8px; font-size:12px; color:#475569;">
-                    <strong>Deployments:</strong> ${inc.responderIds.length} / ${inc.maxNeeded}<br>
-                    <strong>Responders:</strong> ${inc.responderIds.length > 0 ? inc.responderIds.join(', ') : 'Searching for localized assets...'}
-                </div>
+                <strong>${inc.id}: ${inc.type}</strong> [Criticality: ${inc.criticality}]<br>
+                📍 ${inc.address}<br>
+                <small>Responders: ${inc.responderIds.length > 0 ? inc.responderIds.join(', ') : 'Dispatching assets...'}</small>
             `;
             if(containers[inc.status]) containers[inc.status].appendChild(card);
         });
+    },
+
+    renderHeatmap() {
+        const area = document.getElementById('heatmapArea');
+        if(!area) return;
+        const count = this.vols.filter(v => v.isOnDuty && v.isVerified).length;
+        area.innerHTML = `<div style="padding:15px; background:#dcfce7; border:1px solid #16a34a; border-radius:8px;"><strong>District Strength:</strong> ${count} Verified Responders Active.</div>`;
     },
 
     updateStats() {
@@ -292,5 +282,5 @@ window.Engine = {
     }
 };
 
-// Start Initial Logic
-document.addEventListener('DOMContentLoaded', () => { Engine.updateStats(); });
+// Auto-init stats
+document.addEventListener('DOMContentLoaded', () => Engine.updateStats());
